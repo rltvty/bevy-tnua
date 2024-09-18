@@ -22,7 +22,7 @@ impl TnuaBasisContext<'_> {
     /// The direction considered as "up".
     pub fn up_direction(&self) -> Dir3 {
         let up = Dir3::new(-self.tracker.gravity).unwrap_or(Dir3::Y);
-        println!("TnuaBasisContext up is: {:?}, gravity is: {:?}", up, self.tracker.gravity);
+        // println!("TnuaBasisContext up is: {:?}, gravity is: {:?}", up, self.tracker.gravity);
         up
     }
 }
@@ -235,7 +235,7 @@ impl<'a> TnuaActionContext<'a> {
     /// The direction considered as "up".
     pub fn up_direction(&self) -> Dir3 {
         let up = Dir3::new(-self.tracker.gravity).unwrap_or(Dir3::Y);
-        println!("TnuaActionContext up is: {:?}, gravity is: {:?}", up, self.tracker.gravity);
+        // println!("TnuaActionContext up is: {:?}, gravity is: {:?}", up, self.tracker.gravity);
         up
     }
 }

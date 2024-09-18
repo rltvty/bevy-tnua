@@ -88,13 +88,13 @@ fn update_rigid_body_trackers_system(
 ) {
     for (transform, linaer_velocity, angular_velocity, mut tracker, tnua_toggle) in query.iter_mut()
     {
-        println!("debug update_rigid_body_trackers_system");
+        // println!("debug update_rigid_body_trackers_system");
         match tnua_toggle.copied().unwrap_or_default() {
             TnuaToggle::Disabled => continue,
             TnuaToggle::SenseOnly => {}
             TnuaToggle::Enabled => {}
         }
-        println!("about to set tracker");
+        // println!("about to set tracker");
         let (_, rotation, translation) = transform.to_scale_rotation_translation();
         *tracker = TnuaRigidBodyTracker {
             translation: translation.adjust_precision(),
@@ -103,7 +103,7 @@ fn update_rigid_body_trackers_system(
             angvel: angular_velocity.0.adjust_precision(),
             gravity: gravity.0.adjust_precision(),
         };
-        println!("tracker.gravity: {:?}", tracker.gravity);
+        // println!("tracker.gravity: {:?}", tracker.gravity);
     }
 }
 
