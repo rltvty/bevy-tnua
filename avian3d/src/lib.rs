@@ -47,6 +47,7 @@ impl Default for TnuaAvian3dPlugin {
 
 impl Plugin for TnuaAvian3dPlugin {
     fn build(&self, app: &mut App) {
+        println!("configuring TnuaSystemSets on schedule: {:?}", self.schedule);
         app.configure_sets(
             self.schedule,
             TnuaSystemSet
@@ -54,6 +55,7 @@ impl Plugin for TnuaAvian3dPlugin {
                 .before(PhysicsStepSet::BroadPhase)
                 .run_if(|physics_time: Res<Time<Physics>>| !physics_time.is_paused()),
         );
+        println!("adding set TnuaPipelineStages::Sensors to schedule: {:?}", self.schedule);
         app.add_systems(
             self.schedule,
             (
@@ -62,6 +64,7 @@ impl Plugin for TnuaAvian3dPlugin {
             )
                 .in_set(TnuaPipelineStages::Sensors),
         );
+        println!("adding set TnuaPipelineStages::Motors to schedule: {:?}", self.schedule);
         app.add_systems(
             self.schedule,
             apply_motors_system.in_set(TnuaPipelineStages::Motors),
@@ -85,11 +88,13 @@ fn update_rigid_body_trackers_system(
 ) {
     for (transform, linaer_velocity, angular_velocity, mut tracker, tnua_toggle) in query.iter_mut()
     {
+        println!("debug update_rigid_body_trackers_system");
         match tnua_toggle.copied().unwrap_or_default() {
             TnuaToggle::Disabled => continue,
             TnuaToggle::SenseOnly => {}
             TnuaToggle::Enabled => {}
         }
+        println!("about to set tracker");
         let (_, rotation, translation) = transform.to_scale_rotation_translation();
         *tracker = TnuaRigidBodyTracker {
             translation: translation.adjust_precision(),
@@ -98,6 +103,7 @@ fn update_rigid_body_trackers_system(
             angvel: angular_velocity.0.adjust_precision(),
             gravity: gravity.0.adjust_precision(),
         };
+        println!("tracker.gravity: {:?}", tracker.gravity);
     }
 }
 
