@@ -164,7 +164,15 @@ impl TnuaBasis for TnuaBuiltinWalk {
         let impulse_to_offset: Vector3;
         let slipping_vector: Option<Vector3>;
 
+        println!();
+        println!();
+        println!();
+        println!();
+
         if let Some(sensor_output) = &ctx.proximity_sensor.output {
+            println!("tnua: ctx.tracker.velocity: {:?}", ctx.tracker.velocity);
+            println!("tnua: sensor_output.entity_linvel: {:?}", sensor_output.entity_linvel);
+
             state.effective_velocity = ctx.tracker.velocity - sensor_output.entity_linvel;
             let sideways_unnormalized = sensor_output
                 .normal
@@ -198,6 +206,8 @@ impl TnuaBasis for TnuaBuiltinWalk {
                     )
                 }
             };
+            println!("tnua: slipping_vector: {:?}", slipping_vector.unwrap_or_default());
+            println!("tnua: sensor.proximity: {:?}", sensor_output.proximity);
 
             if state.airborne_timer.is_some() {
                 considered_in_air = true;
@@ -234,11 +244,17 @@ impl TnuaBasis for TnuaBuiltinWalk {
             slipping_vector = None;
             state.standing_on = None;
         }
+        println!("tnua: impulse_to_offset: {:?}", impulse_to_offset);
+
         state.effective_velocity += impulse_to_offset;
+
+        // println!("tnua: effective_velocity: {:?}", state.effective_velocity);
 
         let velocity_on_plane = state
             .effective_velocity
             .reject_from(ctx.up_direction().adjust_precision());
+
+        // println!("tnua: velocity_on_plane: {:?}", velocity_on_plane);
 
         let desired_boost = self.desired_velocity - velocity_on_plane;
 
@@ -326,6 +342,11 @@ impl TnuaBasis for TnuaBuiltinWalk {
             }
         };
 
+        // This is trying to push me forward (down), when I try to walk in that direction
+        // But some unknown thing is killing this acceleration.
+        println!("tnua: walk_vel_change: acceleration: {:?}", walk_vel_change.acceleration);
+        println!("tnua: walk_vel_change: boost: {:?}", walk_vel_change.boost);
+
         let upward_impulse: TnuaVelChange = 'upward_impulse: {
             let should_disable_due_to_slipping =
                 slipping_vector.is_some() && state.vertical_velocity <= 0.0;
@@ -377,26 +398,37 @@ impl TnuaBasis for TnuaBuiltinWalk {
             TnuaVelChange::ZERO
         };
 
-        motor.lin = walk_vel_change + TnuaVelChange::boost(impulse_to_offset) + upward_impulse;
+        println!("tnua: upward_impulse: acceleration: {:?}", upward_impulse.acceleration);
+        println!("tnua: upward_impulse: boost: {:?}", upward_impulse.boost);
+
+        let total_desired_change = walk_vel_change + TnuaVelChange::boost(impulse_to_offset) + upward_impulse;
+
+        println!("tnua: total_desired_change: acceleration: {:?}", total_desired_change.acceleration);
+        println!("tnua: total_desired_change: boost: {:?}", total_desired_change.boost);
+
+        motor.lin = total_desired_change;
         let new_velocity = state.effective_velocity
             + motor.lin.boost
             + ctx.frame_duration * motor.lin.acceleration
             - impulse_to_offset;
         state.running_velocity = new_velocity.reject_from(ctx.up_direction().adjust_precision());
 
+        println!("tnua: new_velocity: {:?}", new_velocity);
+        println!("tnua: running_velocity: {:?}", state.running_velocity);
+
         // Tilt
 
         let torque_to_fix_tilt = {
             let tilted_up = ctx
                 .tracker
-                .rotation
-                .mul_vec3(ctx.up_direction().adjust_precision());
+                .rotation * Vec3::Y.adjust_precision();
 
             let rotation_required_to_fix_tilt =
                 Quaternion::from_rotation_arc(tilted_up, ctx.up_direction().adjust_precision());
 
             let desired_angvel = (rotation_required_to_fix_tilt.xyz() / ctx.frame_duration)
                 .clamp_length_max(self.tilt_offset_angvel);
+
             let angular_velocity_diff = desired_angvel - ctx.tracker.angvel;
             angular_velocity_diff.clamp_length_max(ctx.frame_duration * self.tilt_offset_angacl)
         };
@@ -497,10 +529,8 @@ impl TnuaBuiltinWalk {
         let dampening_force = relative_velocity * self.spring_dampening / ctx.frame_duration;
         let spring_force = spring_force - dampening_force;
 
-        let gravity_compensation = -ctx
-            .tracker
-            .gravity
-            .dot(ctx.up_direction().adjust_precision());
+        // the former calculation always equated to the current gravity force.
+        let gravity_compensation = 9.8;
 
         ctx.frame_duration * (spring_force + gravity_compensation)
     }
