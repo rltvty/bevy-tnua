@@ -38,7 +38,7 @@ impl Default for TnuaControllerPlugin {
 
 impl Plugin for TnuaControllerPlugin {
     fn build(&self, app: &mut App) {
-        println!("configuring TnuaPipelineStages::Sensors controller set for schedule: {:?}", self.schedule);
+        // println!("configuring TnuaPipelineStages::Sensors controller set for schedule: {:?}", self.schedule);
         app.configure_sets(
             self.schedule,
             (

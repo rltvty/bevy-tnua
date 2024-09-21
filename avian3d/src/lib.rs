@@ -47,7 +47,7 @@ impl Default for TnuaAvian3dPlugin {
 
 impl Plugin for TnuaAvian3dPlugin {
     fn build(&self, app: &mut App) {
-        println!("tnua: configuring TnuaSystemSets on schedule: {:?}", self.schedule);
+        // println!("tnua: configuring TnuaSystemSets on schedule: {:?}", self.schedule);
         app.configure_sets(
             self.schedule,
             TnuaSystemSet
@@ -55,7 +55,7 @@ impl Plugin for TnuaAvian3dPlugin {
                 .before(PhysicsStepSet::BroadPhase)
                 .run_if(|physics_time: Res<Time<Physics>>| !physics_time.is_paused()),
         );
-        println!("tnua: adding set TnuaPipelineStages::Sensors to schedule: {:?}", self.schedule);
+        // println!("tnua: adding set TnuaPipelineStages::Sensors to schedule: {:?}", self.schedule);
         app.add_systems(
             self.schedule,
             (
@@ -64,7 +64,7 @@ impl Plugin for TnuaAvian3dPlugin {
             )
                 .in_set(TnuaPipelineStages::Sensors),
         );
-        println!("tnua: adding set TnuaPipelineStages::Motors to schedule: {:?}", self.schedule);
+        // println!("tnua: adding set TnuaPipelineStages::Motors to schedule: {:?}", self.schedule);
         app.add_systems(
             self.schedule,
             apply_motors_system.in_set(TnuaPipelineStages::Motors),
@@ -154,8 +154,8 @@ fn update_proximity_sensors_system(
             let gravity_direction = (Vec3::ZERO - transform.translation()).normalize();
             let cast_direction = Dir3::new(gravity_direction).unwrap_or_else(|_| Dir3::NEG_Y);
 
-            println!("Cast Origin: {:?}", cast_origin);
-            println!("cast_direction: {:?}", cast_direction);
+            // println!("tnua: cast_origin: {:?}", cast_origin);
+            // println!("tnua: cast_direction: {:?}", cast_direction);
 
             struct CastResult {
                 entity: Entity,
@@ -176,7 +176,7 @@ fn update_proximity_sensors_system(
             if let Some(ghost_sensor) = ghost_sensor.as_mut() {
                 ghost_sensor.0.clear();
             }
-            println!("tnua: boop1");
+            // println!("tnua: boop1");
             let mut apply_cast = |cast_result: CastResult| {
                 let CastResult {
                     entity,
@@ -188,7 +188,7 @@ fn update_proximity_sensors_system(
                 // This fixes https://github.com/idanarye/bevy-tnua/issues/14
                 if let Some(contacts) = collisions.get(owner_entity, entity) {
                     let same_order = owner_entity == contacts.entity1;
-                    println!("tnua: boop2"); //not seen
+                    // println!("tnua: boop2"); //not seen
                     for manifold in contacts.manifolds.iter() {
                         if !manifold.contacts.is_empty() {
                             let manifold_normal = if same_order {
@@ -203,7 +203,7 @@ fn update_proximity_sensors_system(
                             }
                         }
                     }
-                    println!("tnua: boop3"); //not seen
+                    // println!("tnua: boop3"); //not seen
                 }
 
                 // TODO: see if https://github.com/idanarye/bevy-tnua/issues/14 replicates in Avian,
@@ -218,7 +218,7 @@ fn update_proximity_sensors_system(
                 else {
                     return false;
                 };
-                println!("tnua: boop4"); //only seen before issues
+                // println!("tnua: boop4"); //only seen before issues
 
                 let entity_linvel;
                 let entity_angvel;
@@ -248,7 +248,7 @@ fn update_proximity_sensors_system(
                     entity_linvel,
                     entity_angvel,
                 };
-                println!("tnua: boop5"); //only seen before issues
+                // println!("tnua: boop5"); //only seen before issues
 
                 let excluded_by_collision_layers = || {
                     let collision_layers = collision_layers.copied().unwrap_or_default();
@@ -272,7 +272,7 @@ fn update_proximity_sensors_system(
 
             let query_filter = SpatialQueryFilter::from_excluded_entities([owner_entity]);
             if let Some(TnuaAvian3dSensorShape(shape)) = shape {
-                println!("tnua: boop6"); //always seen
+                // println!("tnua: boop6"); //always seen
                 let (_, owner_rotation, _) = transform.to_scale_rotation_translation();
                 // println!("shape_hits_callback owner_rotation original: {:?}", owner_rotation);
                 // let owner_rotation = Quat::from_axis_angle(
@@ -300,7 +300,7 @@ fn update_proximity_sensors_system(
                     },
                 );
             } else {
-                println!("tnua: boop7"); //never seen
+                // println!("tnua: boop7"); //never seen
                 spatial_query_pipeline.ray_hits_callback(
                     cast_origin,
                     cast_direction,
@@ -372,6 +372,6 @@ fn apply_motors_system(
             );
         }
         // Tnua is sending super high force at edge to physics model, but it is not letting object move forward.
-        println!("tnua: motor: external_force: {:?}", external_force)
+        // println!("tnua: motor: external_force: {:?}", external_force)
     }
 }

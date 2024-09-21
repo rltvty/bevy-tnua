@@ -164,14 +164,14 @@ impl TnuaBasis for TnuaBuiltinWalk {
         let impulse_to_offset: Vector3;
         let slipping_vector: Option<Vector3>;
 
-        println!();
-        println!();
-        println!();
-        println!();
+        // println!();
+        // println!();
+        // println!();
+        // println!();
 
         if let Some(sensor_output) = &ctx.proximity_sensor.output {
-            println!("tnua: ctx.tracker.velocity: {:?}", ctx.tracker.velocity);
-            println!("tnua: sensor_output.entity_linvel: {:?}", sensor_output.entity_linvel);
+            // println!("tnua: ctx.tracker.velocity: {:?}", ctx.tracker.velocity);
+            // println!("tnua: sensor_output.entity_linvel: {:?}", sensor_output.entity_linvel);
 
             state.effective_velocity = ctx.tracker.velocity - sensor_output.entity_linvel;
             let sideways_unnormalized = sensor_output
@@ -206,8 +206,8 @@ impl TnuaBasis for TnuaBuiltinWalk {
                     )
                 }
             };
-            println!("tnua: slipping_vector: {:?}", slipping_vector.unwrap_or_default());
-            println!("tnua: sensor.proximity: {:?}", sensor_output.proximity);
+            // println!("tnua: slipping_vector: {:?}", slipping_vector.unwrap_or_default());
+            // println!("tnua: sensor.proximity: {:?}", sensor_output.proximity);
 
             if state.airborne_timer.is_some() {
                 considered_in_air = true;
@@ -244,7 +244,7 @@ impl TnuaBasis for TnuaBuiltinWalk {
             slipping_vector = None;
             state.standing_on = None;
         }
-        println!("tnua: impulse_to_offset: {:?}", impulse_to_offset);
+        // println!("tnua: impulse_to_offset: {:?}", impulse_to_offset);
 
         state.effective_velocity += impulse_to_offset;
 
@@ -344,8 +344,8 @@ impl TnuaBasis for TnuaBuiltinWalk {
 
         // This is trying to push me forward (down), when I try to walk in that direction
         // But some unknown thing is killing this acceleration.
-        println!("tnua: walk_vel_change: acceleration: {:?}", walk_vel_change.acceleration);
-        println!("tnua: walk_vel_change: boost: {:?}", walk_vel_change.boost);
+        // println!("tnua: walk_vel_change: acceleration: {:?}", walk_vel_change.acceleration);
+        // println!("tnua: walk_vel_change: boost: {:?}", walk_vel_change.boost);
 
         let upward_impulse: TnuaVelChange = 'upward_impulse: {
             let should_disable_due_to_slipping =
@@ -398,13 +398,13 @@ impl TnuaBasis for TnuaBuiltinWalk {
             TnuaVelChange::ZERO
         };
 
-        println!("tnua: upward_impulse: acceleration: {:?}", upward_impulse.acceleration);
-        println!("tnua: upward_impulse: boost: {:?}", upward_impulse.boost);
+        // println!("tnua: upward_impulse: acceleration: {:?}", upward_impulse.acceleration);
+        // println!("tnua: upward_impulse: boost: {:?}", upward_impulse.boost);
 
         let total_desired_change = walk_vel_change + TnuaVelChange::boost(impulse_to_offset) + upward_impulse;
 
-        println!("tnua: total_desired_change: acceleration: {:?}", total_desired_change.acceleration);
-        println!("tnua: total_desired_change: boost: {:?}", total_desired_change.boost);
+        // println!("tnua: total_desired_change: acceleration: {:?}", total_desired_change.acceleration);
+        // println!("tnua: total_desired_change: boost: {:?}", total_desired_change.boost);
 
         motor.lin = total_desired_change;
         let new_velocity = state.effective_velocity
@@ -413,8 +413,8 @@ impl TnuaBasis for TnuaBuiltinWalk {
             - impulse_to_offset;
         state.running_velocity = new_velocity.reject_from(ctx.up_direction().adjust_precision());
 
-        println!("tnua: new_velocity: {:?}", new_velocity);
-        println!("tnua: running_velocity: {:?}", state.running_velocity);
+        // println!("tnua: new_velocity: {:?}", new_velocity);
+        // println!("tnua: running_velocity: {:?}", state.running_velocity);
 
         // Tilt
 
