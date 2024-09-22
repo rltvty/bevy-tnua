@@ -122,6 +122,7 @@ fn update_proximity_sensors_system(
         Entity,
         &GlobalTransform,
         &mut TnuaProximitySensor,
+        &TnuaRigidBodyTracker,
         Option<&TnuaRapier3dSensorShape>,
         Option<&mut TnuaGhostSensor>,
         Option<&TnuaSubservientSensor>,
@@ -135,6 +136,7 @@ fn update_proximity_sensors_system(
             owner_entity,
             transform,
             mut sensor,
+            tracker,
             shape,
             mut ghost_sensor,
             subservient,
@@ -145,6 +147,9 @@ fn update_proximity_sensors_system(
                 TnuaToggle::SenseOnly => {}
                 TnuaToggle::Enabled => {}
             }
+            // cast direction should be the same as gravity direction
+            sensor.cast_direction = Dir3::new(tracker.gravity).unwrap_or(Dir3::NEG_Y);
+
             let cast_origin = transform.transform_point(sensor.cast_origin);
             let cast_direction = sensor.cast_direction;
 

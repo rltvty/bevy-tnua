@@ -109,6 +109,7 @@ fn update_proximity_sensors_system(
         Entity,
         &GlobalTransform,
         &mut TnuaProximitySensor,
+        &TnuaRigidBodyTracker,
         Option<&TnuaAvian3dSensorShape>,
         Option<&mut TnuaGhostSensor>,
         Option<&TnuaSubservientSensor>,
@@ -127,6 +128,7 @@ fn update_proximity_sensors_system(
             owner_entity,
             transform,
             mut sensor,
+            tracker,
             shape,
             mut ghost_sensor,
             subservient,
@@ -137,6 +139,8 @@ fn update_proximity_sensors_system(
                 TnuaToggle::SenseOnly => {}
                 TnuaToggle::Enabled => {}
             }
+            // cast direction should be the same as gravity direction
+            sensor.cast_direction = Dir3::new(tracker.gravity).unwrap_or(Dir3::NEG_Y);
 
             // TODO: is there any point in doing these transformations as f64 when that feature
             // flag is active?
