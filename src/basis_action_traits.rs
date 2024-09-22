@@ -21,7 +21,7 @@ pub struct TnuaBasisContext<'a> {
 impl TnuaBasisContext<'_> {
     /// The direction considered as "up".
     pub fn up_direction(&self) -> Dir3 {
-        Dir3::Y
+        Dir3::new(-self.tracker.gravity).unwrap_or(Dir3::Y)
     }
 }
 
@@ -232,7 +232,7 @@ impl<'a> TnuaActionContext<'a> {
 
     /// The direction considered as "up".
     pub fn up_direction(&self) -> Dir3 {
-        Dir3::Y
+        Dir3::new(-self.tracker.gravity).unwrap_or(Dir3::Y)
     }
 }
 

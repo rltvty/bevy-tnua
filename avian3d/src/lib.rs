@@ -145,6 +145,10 @@ fn update_proximity_sensors_system(
                 .adjust_precision();
             let cast_direction = sensor.cast_direction;
 
+            // TODO: figure out how to set this in the sensor.
+            let gravity_direction = (Vec3::ZERO - transform.translation()).normalize();
+            let cast_direction = Dir3::new(gravity_direction).unwrap_or_else(|_| Dir3::NEG_Y);
+
             struct CastResult {
                 entity: Entity,
                 proximity: Float,

@@ -390,7 +390,7 @@ impl TnuaBasis for TnuaBuiltinWalk {
             let tilted_up = ctx
                 .tracker
                 .rotation
-                .mul_vec3(ctx.up_direction().adjust_precision());
+                .mul_vec3(Vec3::Y.adjust_precision());
 
             let rotation_required_to_fix_tilt =
                 Quaternion::from_rotation_arc(tilted_up, ctx.up_direction().adjust_precision());
@@ -497,10 +497,10 @@ impl TnuaBuiltinWalk {
         let dampening_force = relative_velocity * self.spring_dampening / ctx.frame_duration;
         let spring_force = spring_force - dampening_force;
 
-        let gravity_compensation = -ctx
+        let gravity_compensation = ctx
             .tracker
             .gravity
-            .dot(ctx.up_direction().adjust_precision());
+            .length();
 
         ctx.frame_duration * (spring_force + gravity_compensation)
     }
