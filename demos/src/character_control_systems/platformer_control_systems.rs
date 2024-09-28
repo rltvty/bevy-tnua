@@ -1,3 +1,4 @@
+use bevy::math::VectorSpace;
 use bevy::prelude::*;
 #[cfg(feature = "egui")]
 use bevy_egui::{egui, EguiContexts};
@@ -5,10 +6,14 @@ use bevy_tnua::builtins::{TnuaBuiltinCrouch, TnuaBuiltinCrouchState, TnuaBuiltin
 use bevy_tnua::control_helpers::{
     TnuaCrouchEnforcer, TnuaSimpleAirActionsCounter, TnuaSimpleFallThroughPlatformsHelper,
 };
+use levels_setup::IsPlayer;
+#[cfg(feature = "avian3d")]
+use avian3d::dynamics::integrator::Gravity;
 use bevy_tnua::math::{AdjustPrecision, AsF32, Float, Vector3};
 use bevy_tnua::prelude::*;
 use bevy_tnua::{TnuaGhostSensor, TnuaProximitySensor};
 
+use crate::levels_setup;
 use crate::ui::tuning::UiTunable;
 
 use super::Dimensionality;
@@ -49,6 +54,7 @@ pub fn apply_platformer_controls(
         // character.
         Option<&ForwardFromCamera>,
     )>,
+    transform_query: Query<&Transform, With<IsPlayer>>
 ) {
     #[cfg(feature = "egui")]
     if egui_context.ctx_mut().wants_keyboard_input() {
@@ -74,21 +80,35 @@ pub fn apply_platformer_controls(
     {
         // This part is just keyboard input processing. In a real game this would probably be done
         // with a third party plugin.
-        let mut direction = Vector3::ZERO;
+        let mut direction = Vec3::ZERO;
+
+        let mut forward = Vec3::Z;
+        let mut right = Vec3::X;
+        if let Ok(player_transform) = transform_query.get_single() {
+            // Define player's local forward (Z-axis) and right (X-axis)
+            forward = player_transform.rotation * Vec3::Z;
+            right = player_transform.rotation * Vec3::X;
+
+            forward.y = 0.0;
+            right.y = 0.0;
+
+            forward = forward.normalize();
+            right = right.normalize();
+        }
 
         if config.dimensionality == Dimensionality::Dim3 {
             if keyboard.any_pressed([KeyCode::ArrowUp, KeyCode::KeyW]) {
-                direction -= Vector3::Z;
+                direction -= forward;
             }
             if keyboard.any_pressed([KeyCode::ArrowDown, KeyCode::KeyS]) {
-                direction += Vector3::Z;
+                direction += forward;
             }
         }
         if keyboard.any_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]) {
-            direction -= Vector3::X;
+            direction -= right;
         }
         if keyboard.any_pressed([KeyCode::ArrowRight, KeyCode::KeyD]) {
-            direction += Vector3::X;
+            direction += right;
         }
 
         direction = direction.clamp_length_max(1.0);
@@ -98,6 +118,22 @@ pub fn apply_platformer_controls(
                 .looking_to(forward_from_camera.forward.f32(), Vec3::Y)
                 .transform_point(direction.f32())
                 .adjust_precision();
+        }
+
+        let mut turn_amount = 0.0f32;
+        if keyboard.any_pressed([KeyCode::KeyQ]) {
+            turn_amount -= 0.1;
+        }
+        if keyboard.any_pressed([KeyCode::KeyE]) {
+            turn_amount += 0.1;
+        }
+
+        if turn_amount != 0.0 {
+            // Create a quaternion representing the Y-axis rotation
+            let rotation_quat = Quat::from_rotation_y(turn_amount);
+
+            // Rotate the forward vector by the quaternion
+            forward = rotation_quat * forward;
         }
 
         let jump = match config.dimensionality {
@@ -304,7 +340,8 @@ pub fn apply_platformer_controls(
             } else {
                 // For platformers, we only want ot change direction when the character tries to
                 // moves (or when the player explicitly wants to set the direction)
-                direction.normalize_or_zero()
+                //direction.normalize_or_zero()
+                Vec3::ZERO
             },
             ..config.walk.clone()
         });
@@ -367,6 +404,22 @@ pub fn apply_platformer_controls(
             });
         }
     }
+}
+
+
+pub fn update_gravity_system(mut gravity: ResMut<Gravity>, query: Query<&Transform, With<IsPlayer>>) {
+    let Ok(player_transform) = query.get_single() else {
+        return;
+    };
+
+    // Calculate the direction from the player's position to the center of the planet (Vec3::ZERO)
+    let direction_to_center = Vec3::ZERO - player_transform.translation;
+
+    // Normalize the direction vector so it's unit length
+    let gravity_direction = direction_to_center.normalize();
+
+    // Set gravity to point towards the center with a magnitude of -9.8 (standard Earth gravity)
+    gravity.0 = gravity_direction * 9.8;
 }
 
 #[derive(Component)]

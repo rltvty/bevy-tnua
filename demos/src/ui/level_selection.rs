@@ -34,7 +34,8 @@ impl LevelSelectionParam<'_> {
                 None
             });
         if let Some(new_idx) = response.inner.flatten() {
-            writer.send(SwitchToLevel(new_idx));
+            // TODO: I'm not sure if this is correct. Especially level_index...
+            writer.send(SwitchToLevel { level_index: new_idx, is_spherical: true});
         }
     }
 }

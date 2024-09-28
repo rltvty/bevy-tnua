@@ -25,7 +25,7 @@ use tnua_demos_crate::character_animating_systems::platformer_animating_systems:
 #[cfg(feature = "egui")]
 use tnua_demos_crate::character_control_systems::info_dumpeing_systems::character_control_info_dumping_system;
 use tnua_demos_crate::character_control_systems::platformer_control_systems::{
-    apply_platformer_controls, CharacterMotionConfigForPlatformerDemo, FallingThroughControlScheme,
+    apply_platformer_controls, update_gravity_system, CharacterMotionConfigForPlatformerDemo, FallingThroughControlScheme,
 };
 use tnua_demos_crate::character_control_systems::Dimensionality;
 #[cfg(feature = "avian3d")]
@@ -48,6 +48,8 @@ fn main() {
 
     let app_setup_configuration = AppSetupConfiguration::from_environment();
     app.insert_resource(app_setup_configuration.clone());
+
+    app.insert_resource(tnua_demos_crate::levels_setup::level_switching::LevelSettings::default());
 
     #[cfg(feature = "rapier3d")]
     {
@@ -132,7 +134,7 @@ fn main() {
             #[cfg(feature = "avian")]
             ScheduleToUse::PhysicsSchedule => PhysicsSchedule.intern(),
         },
-        apply_platformer_controls.in_set(TnuaUserControlsSystemSet),
+        (apply_platformer_controls, update_gravity_system).in_set(TnuaUserControlsSystemSet),
     );
     app.add_systems(Update, animation_patcher_system);
     app.add_systems(Update, animate_platformer_character);

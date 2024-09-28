@@ -1,3 +1,5 @@
+// level_switching.rs
+
 use std::time::Duration;
 
 use bevy::{
@@ -13,8 +15,8 @@ pub struct IsPlayer;
 
 #[derive(Component)]
 pub struct PositionPlayer {
-    position: Vec3,
-    ttl: Timer,
+    pub position: Vec3,
+    pub ttl: Timer,
 }
 
 impl From<Vec3> for PositionPlayer {
@@ -25,6 +27,36 @@ impl From<Vec3> for PositionPlayer {
         }
     }
 }
+
+// Define the LevelSettings resource
+#[derive(Resource)]
+pub struct LevelSettings {
+    pub is_spherical: bool,
+}
+
+impl Default for LevelSettings {
+    fn default() -> Self {
+        Self {
+            is_spherical: true,
+        }
+    }
+}
+
+// // Need to set these somewhere:
+
+// fn switch_to_spherical_level(mut writer: EventWriter<SwitchToLevel>) {
+//     writer.send(SwitchToLevel {
+//         level_index: 0,     // The index of your level
+//         is_spherical: true, // Set to true for spherical world
+//     });
+// }
+
+// fn switch_to_flat_level(mut writer: EventWriter<SwitchToLevel>) {
+//     writer.send(SwitchToLevel {
+//         level_index: 0,      // The index of your level
+//         is_spherical: false, // Set to false for flat world
+//     });
+// }
 
 pub struct LevelSwitchingPlugin {
     #[allow(clippy::type_complexity)]
@@ -55,14 +87,17 @@ impl LevelSwitchingPlugin {
 
 impl Plugin for LevelSwitchingPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(LevelSettings::default());
+
         let levels = self
             .levels
             .iter()
             .map(|(name, system_registrar)| SwitchableLevel {
                 name: name.clone(),
-                level: system_registrar(app.world_mut()),
+                level: system_registrar(app.world_mut()), // System registered here
             })
             .collect::<Vec<_>>();
+
         let level_index = if let Some(default_level) = self.default_level.as_ref() {
             levels
                 .iter()
@@ -71,14 +106,22 @@ impl Plugin for LevelSwitchingPlugin {
         } else {
             0
         };
-        app.insert_resource(SwitchableLevels { current: 0, levels });
+
+        app.insert_resource(SwitchableLevels {
+            current: 0,
+            levels,
+        });
         app.add_event::<SwitchToLevel>();
         app.add_systems(Update, (handle_level_switching, handle_player_positioning));
         app.add_systems(Startup, move |mut writer: EventWriter<SwitchToLevel>| {
-            writer.send(SwitchToLevel(level_index));
+            writer.send(SwitchToLevel {
+                level_index,
+                is_spherical: false, // Set default to flat world
+            });
         });
     }
 }
+
 
 #[derive(Clone)]
 pub struct SwitchableLevel {
@@ -93,7 +136,10 @@ impl SwitchableLevel {
 }
 
 #[derive(Event)]
-pub struct SwitchToLevel(pub usize);
+pub struct SwitchToLevel {
+    pub level_index: usize,
+    pub is_spherical: bool,
+}
 
 #[derive(Resource)]
 pub struct SwitchableLevels {
@@ -117,13 +163,23 @@ fn handle_level_switching(
     query: Query<Entity, Or<(With<LevelObject>, With<PositionPlayer>)>>,
     mut commands: Commands,
 ) {
-    let Some(SwitchToLevel(new_level_index)) = reader.read().last() else {
+    let Some(SwitchToLevel {
+        level_index,
+        is_spherical,
+    }) = reader.read().last()
+    else {
         return;
     };
-    switchable_levels.current = *new_level_index;
+    switchable_levels.current = *level_index;
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+
+    // Insert the LevelSettings resource with the specified `is_spherical` value
+    commands.insert_resource(LevelSettings {
+        is_spherical: *is_spherical,
+    });
+
     commands.run_system(switchable_levels.current().level);
 }
 
