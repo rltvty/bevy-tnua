@@ -31,7 +31,7 @@ use tnua_demos_crate::character_control_systems::platformer_control_systems::{
 use tnua_demos_crate::character_control_systems::Dimensionality;
 #[cfg(feature = "avian3d")]
 use tnua_demos_crate::levels_setup::for_3d_platformer::LayerNames;
-use tnua_demos_crate::levels_setup::level_switching::LevelSwitchingPlugin;
+use tnua_demos_crate::levels_setup::level_switching::{LevelSettings, LevelSwitchingPlugin};
 use tnua_demos_crate::levels_setup::IsPlayer;
 use tnua_demos_crate::ui::component_alterbation::CommandAlteringSelectors;
 use tnua_demos_crate::ui::info::InfoSource;
@@ -121,6 +121,11 @@ fn main() {
         LevelSwitchingPlugin::new(app_setup_configuration.level_to_load.as_ref()).with(
             "Default",
             tnua_demos_crate::levels_setup::for_3d_platformer::setup_level,
+            LevelSettings::default(),
+        ).with(
+            "Spherical",
+            tnua_demos_crate::levels_setup::for_3d_platformer::setup_level,
+            LevelSettings{is_spherical: true},
         )
     });
     app.add_systems(Startup, setup_player);

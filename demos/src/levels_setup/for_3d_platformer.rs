@@ -27,11 +27,9 @@ pub fn setup_level(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    asset_server: Res<AssetServer>,
-    level_settings: Res<levels_setup::level_switching::LevelSettings>, // Access LevelSettings resource
+    asset_server: Res<AssetServer>
 ) {
-    // let is_spherical = level_settings.is_spherical;
-    let is_spherical = true;
+    let is_spherical = false;
     println!("Setting up level as spherical: {:?}", is_spherical);
 
     // Helper functions to adjust positions and transforms
@@ -85,12 +83,19 @@ pub fn setup_level(
     commands.spawn(PositionPlayer::from(player_position));
 
     let mut cmd = commands.spawn((LevelObject, Name::new("Floor")));
+    let floor_mesh = if is_spherical {
+        meshes.add(Sphere::new(10.0).mesh().ico(16).unwrap())
+    } else {
+        meshes.add(Plane3d::default().mesh().size(128.0, 128.0))
+    };
+
+    cmd.insert(PbrBundle {
+        mesh: floor_mesh,
+        material: materials.add(Color::from(css::WHITE)),
+        ..Default::default()
+    });
+
     if is_spherical {
-        cmd.insert(PbrBundle {
-            mesh: meshes.add(Sphere::new(10.0).mesh().ico(16).unwrap()),
-            material: materials.add(Color::from(css::WHITE)),
-            ..Default::default()
-        });
         #[cfg(feature = "rapier3d")]
         cmd.insert(rapier::Collider::ball(10.0));
         #[cfg(feature = "avian3d")]
@@ -99,11 +104,6 @@ pub fn setup_level(
             cmd.insert(avian::Collider::sphere(10.0));
         }
     } else {
-        cmd.insert(PbrBundle {
-            mesh: meshes.add(Plane3d::default().mesh().size(128.0, 128.0)),
-            material: materials.add(Color::from(css::WHITE)),
-            ..Default::default()
-        });
         #[cfg(feature = "rapier3d")]
         cmd.insert(rapier::Collider::halfspace(Vec3::Y).unwrap());
         #[cfg(feature = "avian3d")]
@@ -210,6 +210,8 @@ pub fn setup_level(
     for (name, position) in scene_positions.iter() {
         let mut transform = Transform::from_translation(*position);
         transform = adjust_transform(transform, is_spherical);
+
+        println!("Loading asset scene bundle: {:?}", name);
 
         let mut cmd = commands.spawn((
             LevelObject,

@@ -37,7 +37,7 @@ pub struct LevelSettings {
 impl Default for LevelSettings {
     fn default() -> Self {
         Self {
-            is_spherical: true,
+            is_spherical: false,
         }
     }
 }
@@ -60,7 +60,7 @@ impl Default for LevelSettings {
 
 pub struct LevelSwitchingPlugin {
     #[allow(clippy::type_complexity)]
-    levels: Vec<(String, Box<dyn Send + Sync + Fn(&mut World) -> SystemId>)>,
+    levels: Vec<(String, Box<dyn Send + Sync + Fn(&mut World) -> SystemId>, LevelSettings)>,
     default_level: Option<String>,
 }
 
@@ -76,10 +76,12 @@ impl LevelSwitchingPlugin {
         mut self,
         name: impl ToString,
         system: impl 'static + Send + Sync + Clone + IntoSystem<(), (), M>,
+        settings: LevelSettings,
     ) -> Self {
         self.levels.push((
             name.to_string(),
             Box::new(move |world| world.register_system(system.clone())),
+            settings,
         ));
         self
     }
@@ -92,9 +94,10 @@ impl Plugin for LevelSwitchingPlugin {
         let levels = self
             .levels
             .iter()
-            .map(|(name, system_registrar)| SwitchableLevel {
+            .map(|(name, system_registrar, settings)| SwitchableLevel {
                 name: name.clone(),
                 level: system_registrar(app.world_mut()), // System registered here
+                // settings: settings,
             })
             .collect::<Vec<_>>();
 
@@ -114,9 +117,9 @@ impl Plugin for LevelSwitchingPlugin {
         app.add_event::<SwitchToLevel>();
         app.add_systems(Update, (handle_level_switching, handle_player_positioning));
         app.add_systems(Startup, move |mut writer: EventWriter<SwitchToLevel>| {
+            println!("Switching level to index: {:?}", level_index);
             writer.send(SwitchToLevel {
-                level_index,
-                is_spherical: false, // Set default to flat world
+                level_index
             });
         });
     }
@@ -138,7 +141,6 @@ impl SwitchableLevel {
 #[derive(Event)]
 pub struct SwitchToLevel {
     pub level_index: usize,
-    pub is_spherical: bool,
 }
 
 #[derive(Resource)]
@@ -165,7 +167,6 @@ fn handle_level_switching(
 ) {
     let Some(SwitchToLevel {
         level_index,
-        is_spherical,
     }) = reader.read().last()
     else {
         return;
@@ -174,11 +175,6 @@ fn handle_level_switching(
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
-
-    // Insert the LevelSettings resource with the specified `is_spherical` value
-    commands.insert_resource(LevelSettings {
-        is_spherical: *is_spherical,
-    });
 
     commands.run_system(switchable_levels.current().level);
 }
