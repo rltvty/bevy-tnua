@@ -11,8 +11,8 @@ use bevy_tnua::math::{AdjustPrecision, Vector3};
 use bevy_tnua::TnuaGhostPlatform;
 
 use crate::MovingPlatform;
-use crate::levels_setup;
 
+use super::level_switching::SwitchableLevels;
 use super::{LevelObject, PositionPlayer};
 
 #[cfg(feature = "avian3d")]
@@ -28,10 +28,13 @@ pub fn setup_level(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
+    switchable_levels: Res<SwitchableLevels>,
 ) {
-    let is_spherical = true;
-    println!("Setting up level as spherical: {:?}", is_spherical);
-
+    let mut is_spherical: bool = false;
+    if let Some(switchable_level) = switchable_levels.levels.get(switchable_levels.current) {
+        is_spherical = switchable_level.settings().is_spherical
+    }
+    
     fn get_transform(position: Vec3, is_spherical: bool) -> Transform {
         let transform = Transform::from_translation(position);
         adjust_transform(transform, is_spherical)

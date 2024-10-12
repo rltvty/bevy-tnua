@@ -34,8 +34,6 @@ impl LevelSelectionParam<'_> {
                 None
             });
         if let Some(new_idx) = response.inner.flatten() {
-            // TODO: I'm not sure if this is correct. Especially level_index...
-            println!("Sending SwitchToLevel event with index: {:?}", new_idx);
             writer.send(SwitchToLevel { level_index: new_idx});
         }
     }

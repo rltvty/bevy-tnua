@@ -1,4 +1,3 @@
-use bevy::math::VectorSpace;
 use bevy::prelude::*;
 #[cfg(feature = "egui")]
 use bevy_egui::{egui, EguiContexts};

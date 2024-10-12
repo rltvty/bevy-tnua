@@ -29,7 +29,7 @@ impl From<Vec3> for PositionPlayer {
 }
 
 // Define the LevelSettings resource
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct LevelSettings {
     pub is_spherical: bool,
 }
@@ -97,7 +97,7 @@ impl Plugin for LevelSwitchingPlugin {
             .map(|(name, system_registrar, settings)| SwitchableLevel {
                 name: name.clone(),
                 level: system_registrar(app.world_mut()), // System registered here
-                // settings: settings,
+                settings: settings.clone(),
             })
             .collect::<Vec<_>>();
 
@@ -117,7 +117,6 @@ impl Plugin for LevelSwitchingPlugin {
         app.add_event::<SwitchToLevel>();
         app.add_systems(Update, (handle_level_switching, handle_player_positioning));
         app.add_systems(Startup, move |mut writer: EventWriter<SwitchToLevel>| {
-            println!("Switching level to index: {:?}", level_index);
             writer.send(SwitchToLevel {
                 level_index
             });
@@ -130,11 +129,16 @@ impl Plugin for LevelSwitchingPlugin {
 pub struct SwitchableLevel {
     name: String,
     level: SystemId,
+    settings: LevelSettings,
 }
 
 impl SwitchableLevel {
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn settings(&self) -> &LevelSettings {
+        &self.settings
     }
 }
 
