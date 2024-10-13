@@ -24,7 +24,8 @@ pub enum LayerNames {
 }
 
 pub fn setup_level(mut helper: LevelSetupHelper3d) {
-    helper.spawn(PositionPlayer::from(Vec3::new(0.0, 10.0, 0.0)));
+    let player_position = helper.adjust_position(Vec3::new(0.0, 0.0, 0.0));
+    helper.spawn(PositionPlayer::from(player_position));
 
     helper.spawn_floor(css::WHITE);
 
@@ -133,6 +134,16 @@ pub fn setup_level(mut helper: LevelSetupHelper3d) {
         ));
 
     // spawn moving and spinning platforms
+    let transform = helper.get_transform(Vec3::new(-2.0, 2.0, 10.0));
+    let direction = if helper.is_spherical() { transform.translation.normalize() } else {Vec3::Y};
+    let adjusted_positions = helper.adjust_positions(&[
+        Vector3::new(-4.0, 6.0, 0.0),
+        Vector3::new(-8.0, 6.0, 0.0),
+        Vector3::new(-8.0, 10.0, 0.0),
+        Vector3::new(-8.0, 10.0, -4.0),
+        Vector3::new(-4.0, 10.0, -4.0),
+        Vector3::new(-4.0, 10.0, 0.0),
+    ]);
     let mut moving_platform_helper = helper.with_color(css::BLUE);
     moving_platform_helper
         .spawn_cuboid(
@@ -143,14 +154,7 @@ pub fn setup_level(mut helper: LevelSetupHelper3d) {
         .make_kinematic()
         .insert(MovingPlatform::new(
             4.0,
-            &[
-                Vector3::new(-4.0, 6.0, 0.0),
-                Vector3::new(-8.0, 6.0, 0.0),
-                Vector3::new(-8.0, 10.0, 0.0),
-                Vector3::new(-8.0, 10.0, -4.0),
-                Vector3::new(-4.0, 10.0, -4.0),
-                Vector3::new(-4.0, 10.0, 0.0),
-            ],
+            &adjusted_positions,
         ));
 
     moving_platform_helper
@@ -160,5 +164,5 @@ pub fn setup_level(mut helper: LevelSetupHelper3d) {
             3.0,
             0.5,
         )
-        .make_kinematic_with_angular_velocity(Vector3::Y);
+        .make_kinematic_with_angular_velocity(direction);
 }

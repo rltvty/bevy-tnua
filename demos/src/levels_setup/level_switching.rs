@@ -26,9 +26,22 @@ impl From<Vec3> for PositionPlayer {
     }
 }
 
+#[derive(Resource, Clone)]
+pub struct LevelSettings {
+    pub is_spherical: bool,
+}
+
+impl Default for LevelSettings {
+    fn default() -> Self {
+        Self {
+            is_spherical: false,
+        }
+    }
+}
+
 pub struct LevelSwitchingPlugin {
     #[allow(clippy::type_complexity)]
-    levels: Vec<(String, Box<dyn Send + Sync + Fn(&mut World) -> SystemId>)>,
+    levels: Vec<(String, Box<dyn Send + Sync + Fn(&mut World) -> SystemId>, LevelSettings)>,
     default_level: Option<String>,
 }
 
@@ -44,10 +57,12 @@ impl LevelSwitchingPlugin {
         mut self,
         name: impl ToString,
         system: impl 'static + Send + Sync + Clone + IntoSystem<(), (), M>,
+        settings: LevelSettings,
     ) -> Self {
         self.levels.push((
             name.to_string(),
             Box::new(move |world| world.register_system(system.clone())),
+            settings,
         ));
         self
     }
@@ -55,12 +70,15 @@ impl LevelSwitchingPlugin {
 
 impl Plugin for LevelSwitchingPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(LevelSettings::default());
+
         let levels = self
             .levels
             .iter()
-            .map(|(name, system_registrar)| SwitchableLevel {
+            .map(|(name, system_registrar, settings)| SwitchableLevel {
                 name: name.clone(),
                 level: system_registrar(app.world_mut()),
+                settings: settings.clone(),
             })
             .collect::<Vec<_>>();
         let level_index = if let Some(default_level) = self.default_level.as_ref() {
@@ -84,11 +102,16 @@ impl Plugin for LevelSwitchingPlugin {
 pub struct SwitchableLevel {
     name: String,
     level: SystemId,
+    settings: LevelSettings,
 }
 
 impl SwitchableLevel {
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn settings(&self) -> &LevelSettings {
+        &self.settings
     }
 }
 
