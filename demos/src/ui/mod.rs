@@ -24,6 +24,7 @@ use self::component_alterbation::CommandAlteringSelectors;
 #[cfg(feature = "egui")]
 use self::plotting::{make_update_plot_data_system, plot_source_rolling_update};
 
+use crate::levels_setup::IsPlayer;
 use tuning::UiTunable;
 
 #[derive(SystemSet, Clone, PartialEq, Eq, Debug, Hash)]
@@ -50,6 +51,7 @@ impl<C: Component + UiTunable> Plugin for DemoUi<C> {
         app.insert_resource(DemoUiPhysicsBackendSettings {
             active: true,
             gravity: Vector3::NEG_Y * GRAVITY_MAGNITUDE,
+            gravity_mode: GravityMode::Adjustable,
         });
         app.configure_sets(
             Update,
@@ -102,11 +104,19 @@ impl<C: Component + UiTunable> Plugin for DemoUi<C> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Debug, PartialEq, Hash)]
+pub enum GravityMode {
+    Adjustable = 0,
+    TowardsOrigin = 1,
+}
+
 // NOTE: The demos are responsible for updating the physics backend
 #[derive(Resource)]
 pub struct DemoUiPhysicsBackendSettings {
     pub active: bool,
     pub gravity: Vector3,
+    pub gravity_mode: GravityMode,
 }
 
 #[derive(Component)]
@@ -195,14 +205,25 @@ fn ui_system<C: Component + UiTunable>(
             ui.checkbox(&mut physics_backend_settings.active, "Physics Enabled");
             let mut gravity_angle = physics_backend_settings.gravity.truncate().to_angle();
             ui.horizontal(|ui| {
-                ui.label("Gravity Angle:");
-                if ui.add(egui::Slider::new(&mut gravity_angle, -float_consts::PI..=0.0)).changed() {
-                    physics_backend_settings.gravity = Vector2::from_angle(gravity_angle).extend(0.0) * GRAVITY_MAGNITUDE;
-                }
-                if ui.button("Reset").clicked() {
-                    physics_backend_settings.gravity = Vector3::NEG_Y * GRAVITY_MAGNITUDE;
-                }
+                egui::ComboBox::from_label("Gravity Angle")
+                    .selected_text(format!("{:?}", physics_backend_settings.gravity_mode))
+                    .show_ui(ui, |ui| {
+                        let gravity_mode = &mut physics_backend_settings.gravity_mode;
+                        ui.selectable_value(gravity_mode, GravityMode::Adjustable, "Adjustable");
+                        ui.selectable_value(gravity_mode,  GravityMode::TowardsOrigin, "Towards Origin");
+                    });
             });
+            if physics_backend_settings.gravity_mode == GravityMode::Adjustable {
+                ui.horizontal(|ui| {
+                    ui.label("Gravity Angle:");
+                    if ui.add(egui::Slider::new(&mut gravity_angle, -float_consts::PI..=0.0)).changed() {
+                        physics_backend_settings.gravity = Vector2::from_angle(gravity_angle).extend(0.0) * GRAVITY_MAGNITUDE;
+                    }
+                    if ui.button("Reset").clicked() {
+                        physics_backend_settings.gravity = Vector3::NEG_Y * GRAVITY_MAGNITUDE;
+                    }
+                });
+            }
         });
         for (
             entity,
@@ -317,16 +338,35 @@ fn update_physics_active_from_ui(
         ResMut<Time<avian3d::schedule::Physics>>,
     >,
     #[cfg(feature = "avian3d")] mut gravity_avian3d: Option<ResMut<avian3d::prelude::Gravity>>,
+    player_query: Query<&Transform, With<IsPlayer>>,
 ) {
+    let ui_gravity = match setting_from_ui.gravity_mode {
+        GravityMode::Adjustable => setting_from_ui.gravity,
+        GravityMode::TowardsOrigin => {
+            if let Ok(player_transform) = player_query.get_single() {
+                // Calculate the direction from the player's position to the center of the planet (Vec3::ZERO)
+                let direction_to_origin = Vec3::ZERO - player_transform.translation;
+    
+                // Normalize the direction vector so it's unit length
+                let gravity_direction = direction_to_origin.normalize();
+    
+                // Set gravity to point towards the center with a magnitude of -9.8 (standard Earth gravity)
+                gravity_direction * GRAVITY_MAGNITUDE
+            } else {
+                Vec3::NEG_Y * GRAVITY_MAGNITUDE
+            }
+        },
+    };
+
     #[cfg(feature = "rapier2d")]
     if let Some(config) = config_rapier2d.as_mut() {
         config.physics_pipeline_active = setting_from_ui.active;
-        config.gravity = setting_from_ui.gravity.truncate();
+        config.gravity = ui_gravity.truncate();
     }
     #[cfg(feature = "rapier3d")]
     if let Some(config) = config_rapier3d.as_mut() {
         config.physics_pipeline_active = setting_from_ui.active;
-        config.gravity = setting_from_ui.gravity;
+        config.gravity = ui_gravity;
     }
     #[cfg(feature = "avian2d")]
     if let Some(physics_time) = physics_time_avian2d.as_mut() {
@@ -339,7 +379,7 @@ fn update_physics_active_from_ui(
     }
     #[cfg(feature = "avian2d")]
     if let Some(gravity) = gravity_avian2d.as_mut() {
-        gravity.0 = setting_from_ui.gravity.truncate();
+        gravity.0 = ui_gravity.truncate();
     }
     #[cfg(feature = "avian3d")]
     if let Some(physics_time) = physics_time_avian3d.as_mut() {
@@ -352,6 +392,6 @@ fn update_physics_active_from_ui(
     }
     #[cfg(feature = "avian3d")]
     if let Some(gravity) = gravity_avian3d.as_mut() {
-        gravity.0 = setting_from_ui.gravity;
+        gravity.0 = ui_gravity;
     }
 }
